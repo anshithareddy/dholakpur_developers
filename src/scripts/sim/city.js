@@ -7,6 +7,7 @@ import { PowerService } from './services/power.js';
 import { SimService } from './services/simService.js';
 import axios from 'axios';
 
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 export class City extends THREE.Group {
   
@@ -137,6 +138,14 @@ export class City extends THREE.Group {
    */
   
   arrq = [];
+
+  async syncPlacements() {
+    try {
+      await axios.post(`${API_BASE_URL}/save-arrq`, { arrq: this.arrq });
+    } catch (error) {
+      console.error('Error saving arrq to file on server:', error);
+    }
+  }
   
 
   placeBuilding(x, y, buildingType) {
@@ -147,18 +156,7 @@ export class City extends THREE.Group {
 
       this.arrq.push({ x, y, buildingType });
       console.log("Placed Buildings:", this.arrq);
-
-      const saveArrqToFile = async (arrq) => {
-        try {
-          await axios.post('http://localhost:5000/save-arrq', { arrq });
-          console.log('Arrq saved to file on server successfully.');
-        } catch (error) {
-          console.error('Error saving arrq to file on server:', error);
-        }
-      };
-      
-      // Call this function when you want to save the arrq array
-      saveArrqToFile(this.arrq);
+      this.syncPlacements();
 
 
 
@@ -187,6 +185,9 @@ export class City extends THREE.Group {
     const tile = this.getTile(x, y);
 
     if (tile.building) {
+      this.arrq = this.arrq.filter((item) => item.x !== x || item.y !== y);
+      this.syncPlacements();
+
       if (tile.building.type === BuildingType.road) {
         this.vehicleGraph.updateTile(x, y, null);
       }
